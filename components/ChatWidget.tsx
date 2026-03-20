@@ -13,6 +13,11 @@ interface DisplayMessage {
   isStreaming?: boolean;
 }
 
+interface MessageBubbleProps {
+  msg: DisplayMessage;
+  key?: string; 
+}
+
 // ── Suggested prompts shown before first message ──────────────────────────
 
 const SUGGESTED_PROMPTS = [
@@ -24,11 +29,11 @@ const SUGGESTED_PROMPTS = [
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
-function generateId() {
+function generateId(): string {
   return Math.random().toString(36).slice(2, 9);
 }
 
-function formatTime(date: Date) {
+function formatTime(date: Date): string {
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
@@ -50,13 +55,11 @@ function TypingDots() {
 
 // ── Single message bubble ─────────────────────────────────────────────────
 
-function MessageBubble({ msg }: { msg: DisplayMessage }) {
+function MessageBubble({ msg }: MessageBubbleProps) {
   const isUser = msg.role === "user";
 
   return (
-    <div
-      className={`flex items-end gap-2 ${isUser ? "flex-row-reverse" : "flex-row"}`}
-    >
+    <div className={`flex items-end gap-2 ${isUser ? "flex-row-reverse" : "flex-row"}`}>
       {/* Avatar */}
       <div
         className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center shadow-sm
@@ -90,17 +93,24 @@ function MessageBubble({ msg }: { msg: DisplayMessage }) {
 // ── Main widget ───────────────────────────────────────────────────────────
 
 export default function ChatWidget() {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState<boolean>(false);
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
-  const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [hasUnread, setHasUnread] = useState(false);
-  const [showScrollBtn, setShowScrollBtn] = useState(false);
+  const [input, setInput] = useState<string>("");
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [hasUnread, setHasUnread] = useState<boolean>(false);
+  const [showScrollBtn, setShowScrollBtn] = useState<boolean>(false);
 
   const historyRef = useRef<ChatMessage[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  // ── Warm up backend on mount ────────────────────────────────────────────
+
+  useEffect(() => {
+    const base = (import.meta.env.VITE_CHAT_API_URL as string | undefined) ?? "http://localhost:8000";
+    fetch(`${base}/health`).catch(() => {});
+  }, []);
 
   // ── Scroll helpers ──────────────────────────────────────────────────────
 
@@ -153,8 +163,9 @@ export default function ChatWidget() {
       timestamp: new Date(),
     };
 
+    const loadingId = generateId();
     const loadingMsg: DisplayMessage = {
-      id: generateId(),
+      id: loadingId,
       role: "assistant",
       content: "",
       timestamp: new Date(),
@@ -168,7 +179,6 @@ export default function ChatWidget() {
     try {
       const reply = await sendMessage(trimmed, historyRef.current);
 
-      // Update history ref for context
       historyRef.current = [
         ...historyRef.current,
         { role: "user", content: trimmed },
@@ -177,15 +187,13 @@ export default function ChatWidget() {
 
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === loadingMsg.id
-            ? { ...m, content: reply, isStreaming: false }
-            : m
+          m.id === loadingId ? { ...m, content: reply, isStreaming: false } : m
         )
       );
     } catch {
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === loadingMsg.id
+          m.id === loadingId
             ? { ...m, content: "Sorry, something went wrong. Please try again.", isStreaming: false }
             : m
         )
@@ -207,7 +215,6 @@ export default function ChatWidget() {
     }
   };
 
-  // Auto-grow textarea
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
     e.target.style.height = "auto";
