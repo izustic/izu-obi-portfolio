@@ -20,7 +20,7 @@ function App() {
 				<Education />
 			</main>
 			<Footer />
-			<ChatWidget />
+			{/* <ChatWidget /> */}
 		</div>
 	);
 }
