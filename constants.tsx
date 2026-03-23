@@ -9,7 +9,7 @@ export const RESUME_DATA: ProfileData = {
     email: "izuchukwuobi997@gmail.com",
     phone: "+2349034042761",
     location: "Lekki, Lagos, Nigeria",
-    website: "https://izuportfolio.netlify.app",
+    website: "https://izuobi.netlify.app",
     linkedin: "https://www.linkedin.com/in/izustic",
     github: "https://www.github.com/izustic"
   },
